@@ -19,15 +19,12 @@ jobs:
         python-version: '3.10'
 
     - name: Install dependencies
-      run: main.yml
+      run: |
         python -m pip install --upgrade pip
         pip install -r requirements.txt
-        pip install some-extra-library
 
     - name: Run Telegram Bot
       env:
-        TELEGRAM_TOKEN: ${{ secrets.7936896770:AAEMsvebKzKyPJ1Z7c1Nw4prsNTYZ6E5Tu0 }}
-        WEBHOOK_URL: ${{ secrets.WEBHOOK_URL }}
-        DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
       run: |
-        python my_bot.py
+        python bot.py
