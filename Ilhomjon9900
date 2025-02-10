@@ -1,73 +1,41 @@
-import imaplib
-import email
-from email.header import decode_header
-from telegram import Bot
-import asyncio
+import os
+import logging
+from aiogram import Bot, Dispatcher, types
+from aiogram.utils import executor
+from pytube import YouTube
 
-# Telegram bot tokeni
-bot = Bot(token="7936896770:AAEMsvebKzKyPJ1Z7c1Nw4prsNTYZ6E5Tu0")
-chat_id = "283359889"
+# Bot tokenini shu yerga kiriting
+TOKEN = "YOUR_TELEGRAM_BOT_TOKEN"
 
-# Asinxron send_message funksiyasi
-async def send_telegram_message(message):
-    await bot.send_message(chat_id=chat_id, text=message)
+# Bot va dispatcher obyektlarini yaratamiz
+bot = Bot(token=TOKEN)
+dp = Dispatcher(bot)
 
-# Mail.ru serverga ulanish
-def check_email():
-    # Mail.ru pochtasiga ulanish
-    mail = imaplib.IMAP4_SSL("imap.mail.ru")
-    mail.login("kmzuz@mail.ru", "dfxLyJ4NtARP126DJXaG")
-    mail.select("inbox")
+# Logging sozlamalari
+logging.basicConfig(level=logging.INFO)
 
-    # So'nggi xabarlarni qidirish
-    status, messages = mail.search(None, "ALL")
-    messages = messages[0].split()
+@dp.message_handler(commands=['start'])
+async def start(message: types.Message):
+    await message.reply("Salom! YouTube videolarini yuklab beruvchi bot. Menga YouTube link yuboring.")
 
-    # So'nggi xabarni olish
-    latest_email_id = messages[-1]
-    status, msg_data = mail.fetch(latest_email_id, "(RFC822)")
+@dp.message_handler()
+async def download_video(message: types.Message):
+    url = message.text
+    try:
+        await message.reply("⏳ Video yuklanmoqda, biroz kuting...")
+        yt = YouTube(url)
+        video = yt.streams.filter(progressive=True, file_extension="mp4").first()
+        file_path = video.download()
+        
+        # Telegramga yuklash
+        with open(file_path, "rb") as video_file:
+            await bot.send_video(message.chat.id, video_file, caption=f"{yt.title}\n\n@YourBotUsername")
+        
+        # Faylni o‘chiramiz
+        os.remove(file_path)
+    except Exception as e:
+        await message.reply(f"Xatolik yuz berdi: {e}")
 
-    for response_part in msg_data:
-        if isinstance(response_part, tuple):
-            msg = email.message_from_bytes(response_part[1])
+if __name__ == "__main__":
+    executor.start_polling(dp, skip_updates=True)
 
-            # Xabarni dekodlash
-            subject, encoding = decode_header(msg["Subject"])[0]
-            if isinstance(subject, bytes):
-                subject = subject.decode(encoding or "utf-8") if encoding else subject
-
-            from_ = msg.get("From")
-
-            # Xabar matnini olish
-            if msg.is_multipart():
-                for part in msg.walk():
-                    content_type = part.get_content_type()
-                    content_disposition = str(part.get("Content-Disposition"))
-                    if "attachment" not in content_disposition:
-                        body = part.get_payload(decode=True)
-                        if body:
-                            body = body.decode()  # Ensure body is not None before decoding
-                        break
-            else:
-                body = msg.get_payload(decode=True)
-                if body:
-                    body = body.decode()
-
-            # Telegramga yuborish
-            message = f"Xabar: {subject}\n\nFrom: {from_}\n\nBody: {body if body else 'No body content'}"
-            
-            # Asinxron metodni chaqirish
-            asyncio.create_task(send_telegram_message(message))  # create_task ni ishlatish
-
-    mail.close()
-    mail.logout()
-
-# Xabarlarni muntazam tekshirish
-async def main():
-    while True:
-        check_email()
-        await asyncio.sleep(60)  # Har 60 soniyada xabarlarni tekshiradi
-
-# Asosiy funksiya va event loopni ishga tushirish
-if name == "main":
-    asyncio.run(main())
