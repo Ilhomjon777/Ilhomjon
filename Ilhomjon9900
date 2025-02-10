@@ -5,7 +5,7 @@ from aiogram.utils import executor
 from pytube import YouTube
 
 # Bot tokenini shu yerga kiriting
-TOKEN = "YOUR_TELEGRAM_BOT_TOKEN"
+TOKEN = "1997127715:AAFk1qjeTNlV0zj8hrxIA8skIKZQuCkjKVc"
 
 # Bot va dispatcher obyektlarini yaratamiz
 bot = Bot(token=TOKEN)
